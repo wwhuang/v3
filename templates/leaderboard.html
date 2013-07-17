@@ -1,0 +1,259 @@
+{% extends "layout.html" %}
+{% block content %}
+<style type="text/css">
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.bar {
+  fill: steelblue;
+}
+
+.x-axis path {
+  display: none;
+}
+
+#leaderboard_title {
+  position: absolute;
+  top:5px;
+  left:50%;
+  min-width: 100px;
+  width: 30%;
+  border: 3px solid #699CC6;
+  background-color: #fff;
+  margin-left: -15%;
+  text-align: center;
+  color: #111;
+  height: 75px;
+  z-index: 1500;
+  font-size: 200%;
+  vertical-align: center;
+  padding-top: 25px;
+  /*border-radius: 15px;*/
+}
+</style>
+
+<div id="cse-leaderboard"></div>
+
+<script>
+
+var margin = {top: 30, right: 0, bottom: 40, left: 60}
+var width = document.documentElement.clientWidth - margin.left - margin.right - 30
+var height = document.documentElement.clientHeight - margin.top - margin.bottom - 90
+
+// Set up d3 SVG
+var svg = d3.select("#cse-leaderboard").append("svg")
+  .attr("class", "leaderboard-svg")
+  .attr("width", width + margin.left + margin.right)
+  .attr("height", height + margin.top + margin.bottom)
+.append("g")
+  .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+svg.append("text")
+   .attr("class", "fitbit-leaderboard-title")
+   .attr("x", width/2)
+   .attr("y", 10)
+   .attr("text-anchor", "middle")
+   .style("font-size", "36px")
+   .text("Weekly Steps Taken");
+
+var xScale = d3.scale.ordinal()
+  .rangeRoundBands([3, width], .1);
+
+var yScale = d3.scale.linear()
+  .rangeRound([height, 24]);
+
+var xAxis = d3.svg.axis()
+  .scale(xScale)
+  .orient("bottom");
+
+var yAxis = d3.svg.axis()
+  .scale(yScale)
+  .orient("left")
+  .tickFormat(d3.format(".2s"));
+
+// Set up x axis positioning in svg
+svg.append("g")
+.attr("class", "x-axis")
+.attr("transform", "translate(0," + height + ")")
+.call(xAxis);
+
+// Set up y axis positioning and label
+svg.append("g")
+  .attr("class", "y-axis")
+  .call(yAxis)
+  .append("text")
+    .attr("y", 3)
+    .attr("x", -24)
+    .attr("transform", "rotate(-90)")
+    .attr("dy", ".71em")
+    .style("text-anchor", "end")
+    .text("Steps");
+
+// Set up our days to color mapping
+var cScale = d3.scale.ordinal()
+  .domain(["m", "t", "w", "th", "f", "s", "su"])
+  .range(["#212A55", "#3A5E8C", "#699CC6", "#679146", 
+          "#B7BF10", "#FFC72C", "#F6D565"]);
+
+var weekday_mapper = [];
+weekday_mapper[0] = 'su';
+weekday_mapper[1] = 'm';
+weekday_mapper[2] = 't';
+weekday_mapper[3] = 'w';
+weekday_mapper[4] = 'th';
+weekday_mapper[5] = 'f';
+weekday_mapper[6] = 's';
+
+var legend = svg.selectAll(".legend")
+  .data(cScale.domain())
+  .enter()
+
+legend.append("rect")
+  .attr("class", "legend-rect")
+  .attr("x", width - 18)
+  .attr("y", function(d,i){return ((i * 20) + 24)})
+  .attr("width", 18)
+  .attr("height", 18)
+  .attr("vertical-align", "top");
+
+legend.append("text")
+  .attr("class", "legend-text")
+  .attr("x", width - 24)
+  .attr("y", function(d,i){return ( (i * 20) + 39 )  } )
+  .style("text-anchor", "end")
+  .style("vertical-align", "middle")
+  .style("font-size", 12);
+
+getInfoAndRender();
+
+// Run our leaderboard on a loop, updating every 10 seconds
+var looper = setInterval(function(){getInfoAndRender()}, 10000)
+
+// Gets the data from the server, passes it to our D3 js
+function getInfoAndRender() {
+  $.getJSON("{{ meta.root }}/group_info", function(data) {
+    updateLeaderBoard(data);
+  });
+}
+
+function updateLeaderBoard(data) {
+  var m_date = new Date(); 
+  var current_day = m_date.getDay(); 
+  var current_week = [];
+
+  for(var i = current_day; i >= 0; i--) {
+    current_week.push(i);
+  }
+
+  for(var n = 6; n > current_day; n--) {
+    current_week.push(n);
+  }
+
+  var legend_rects = svg.selectAll(".legend-rect")
+                        .data(current_week);
+
+  legend_rects.transition()
+    .duration(750)
+    .style("fill", function(d){ return cScale(weekday_mapper[d]) });
+
+  var legend_text = svg.selectAll(".legend-text")
+                       .data(current_week);
+
+  legend_text.transition()
+    .duration(750)
+    .text(function(d){ return weekday_mapper[d] });
+
+  console.log(data);
+  
+  xScale.domain(data.map(function(d){return d.username}))
+        .rangeRoundBands([3, width], .1);
+  yScale.domain([0, d3.max(data, function(d){ return d.total_steps; } )]);
+  
+  var step_array = []
+
+  data.forEach(function(d) {
+    var y0 = 0;
+    d.step_counts.forEach(function(daystep){
+      daystep.y0 = y0;
+      daystep.y1 = y0 + daystep.steps;
+      daystep.x = xScale(d.username)
+      y0 = daystep.y1;
+      step_array.push(daystep)
+    });
+  });
+
+  var font_adjuster = 22 - (22 % data.length)
+  $(".x-axis").css("font-size", String(font_adjuster + "px"))
+
+  var user_steps = svg.selectAll(".step-bars")
+  	.data( step_array )
+
+  user_steps.transition()
+      .duration(750)
+      .attr("x", function(d){ return d.x })
+      .attr("y", function(d){ return yScale(d.y1) })
+      .attr("height", function(d){ return yScale(d.y0) - yScale(d.y1) })
+      .attr("width", xScale.rangeBand())
+      .style("fill", function(d){ return cScale(d.day) });
+
+  user_steps.enter()
+      .append("rect")
+      .attr("class", "step-bars")
+      .attr("width", xScale.rangeBand())
+      .attr("x", function(d){ return d.x })
+      .attr("y", function(d){ return yScale(d.y1); })
+      .attr("height", function(d){ return yScale(d.y0) - yScale(d.y1); })
+      .style("fill", function(d){ return cScale(d.day) })
+      .style("fill-opacity", 0)
+    .transition()
+      .duration(750)
+      .style("fill-opacity", 1);
+
+  user_steps.exit()
+    .transition()
+      .duration(750)
+      .style("fill-opacity", 0)
+      .remove();
+
+  svg.select(".x-axis")
+    .transition()
+    .duration(500)
+    .call(xAxis);
+
+  svg.select(".y-axis")
+    .transition()
+    .duration(500)
+    .call(yAxis);
+
+  var step_labels = svg.selectAll(".step-labels")
+                      .data(data)
+
+  step_labels.transition()
+    .duration(750)
+    .text(function(d){ return d.total_steps })
+    .attr("x", function(d){ return xScale(d.username) + xScale.rangeBand()/2 })
+    .attr("y", function(d){ return yScale(d.total_steps) - 4 });
+
+  step_labels.enter()
+    .append("text")
+    .attr("class", "step-labels")
+    .attr("text-anchor", "middle")
+    .text(function(d){ return d.total_steps })
+    .transition()
+    .duration(750)
+    .attr("x", function(d){ return xScale(d.username) + xScale.rangeBand()/2  })
+    .attr("y", function(d){ return yScale(d.total_steps) - 4});
+
+  step_labels.exit()
+    .transition()
+    .duration(750)
+    .style("opacity", 0)
+    .remove();
+}
+</script>
+
+{% endblock %}

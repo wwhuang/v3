@@ -1,0 +1,219 @@
+{% extends "layout.html" %}
+
+{% block title %}
+<title> Chord Graph Visualization </title>
+{% endblock %}
+
+{% block body %}
+
+<style>
+
+body {
+  font: 10px sans-serif;
+}
+
+.chord {
+  fill-opacity: .67;
+  stroke: #000;
+  stroke-width: .5px;
+}
+
+#circle circle {
+  fill: none;
+  pointer-events: all;
+}
+
+.group{
+  fill-opacity: 1;
+}
+
+</style>
+
+<div id="chord-graph"></div>
+
+<script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+<script src="http://jquery-csv.googlecode.com/git/src/jquery.csv.js"></script>
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+
+<script>
+
+var ids = [] 
+var width = 720,
+    height = 720,
+    outerRadius = Math.min(width, height) / 2 - 10,
+    innerRadius = outerRadius - 24;
+
+var formatPercent = d3.format(".1%");
+
+var arc = d3.svg.arc()
+    .innerRadius(innerRadius)
+    .outerRadius(outerRadius);
+
+var layout = d3.layout.chord()
+    .padding(.1);
+
+var path = d3.svg.chord()
+    .radius(innerRadius);
+
+var svg = d3.select("#chord-graph").append("svg")
+    .attr("width", width)
+    .attr("height", height)
+  .append("g")
+    .attr("id", "circle")
+    .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+var defs = svg.append('svg:defs');
+
+svg.append("circle")
+    .attr("r", outerRadius);
+
+// Heatmap used to assign colors to each node
+var cscale = d3.scale.linear()
+      .range(["#9b111e","#f7c600"]);
+
+getInfoAndRender();
+var looper = setInterval(function(){getInfoAndRender()}, 10000);
+
+
+function getInfoAndRender() {
+  $.getJSON("{{ url_for('get_chords',  group_id=g_id) }}", function(data) {
+    time_matrix = data['chords']
+    ids = data['ids']
+    render_graph(time_matrix, ids)
+  });
+}
+
+function getColor(i) {
+  var c = cscale(ids[i])
+  var h = ids.length/2
+  if(i < h) {
+    if(i % 2 == 0) {
+      c = cscale(ids[h + i])
+    }
+  }
+  else {
+    if(i % 2 != 0) {
+      c = cscale(ids[i - h])
+    }
+  }
+
+  return c;
+}
+
+function generateGradient(d) {
+  var source_angle = (d.source.startAngle + d.source.endAngle) / 2 - 1.57
+  var target_angle = (d.target.startAngle + d.target.endAngle) / 2 - 1.57
+  var source_x = Math.cos(source_angle)
+  var source_y = Math.sin(source_angle)
+  var target_x = Math.cos(target_angle)
+  var target_y = Math.sin(target_angle)
+  var xdiff = Math.abs(source_x - target_x)
+  var ydiff = Math.abs(source_y - target_y)
+  var x1 = 0
+  var x2 = 0
+  var y1 = 0
+  var y2 = 0
+  var i1 = ids[d.source.index]
+  var i2 = ids[d.target.index]
+
+  if(xdiff > ydiff) {
+    y1 = "0%"
+    y2 = "0%"
+    if(source_x < target_x) {
+      x1 = "0%"
+      x2 = "100%"
+    }
+    else {
+      x1 = "100%"
+      x2 = "0%"
+    }
+  }
+  else {
+    x1 = "0%"
+    x2 = "0%"
+    if(source_y < target_y) {
+      y1 = "0%"
+      y2 = "100%"
+    }
+    else {
+      y1 = "100%"
+      y2 = "0%"
+    }
+  }
+
+  var gradient = defs.append("svg:linearGradient")
+      .attr("id", "gradient-" + i1.toString() + "-" + i2.toString())
+      .attr("x1", x1)
+      .attr("y1", y1)
+      .attr("x2", x2)
+      .attr("y2", y2)
+      .attr("spreadMethod", "pad");
+
+  gradient.append("svg:stop")
+      .attr("offset", "0%")
+      .attr("stop-color", getColor(d.source.index))
+      .attr("stop-opacity", 1);
+
+  gradient.append("svg:stop")
+      .attr("offset", "100%")
+      .attr("stop-color", getColor(d.target.index))
+      .attr("stop-opacity", 1);
+
+  var g_url = 'url(#gradient-' + i1.toString() + "-" + i2.toString()
+  return g_url;
+}
+
+function updateGradient(i1, i2) {
+
+}
+
+
+function render_graph(time_matrix, ids) {
+
+  // Compute the chord layout.
+  layout.matrix(time_matrix);
+
+  cscale.domain([ids[0], ids[ids.length-1]])
+
+  // Add a group per node.
+  var group = svg.selectAll(".group")
+      .data(layout.groups)
+    .enter().append("g")
+      .attr("class", "group")
+
+  // Add the group arc.
+  var groupPath = group.append("path")
+      .attr("id", function(d, i) { return "group" + i; })
+      .attr("d", arc)
+      .attr("class", "group-arc")
+      .style("fill", function(d,i) {return getColor(i)})
+      .style("stroke", "#000")
+      .style("stroke-width", "3px");
+
+  // Add a text label.
+  var groupText = group.append("text")
+      .attr("dy", 15)
+      .style("text-anchor", "middle")
+      .style("fill", "#1e90ff")
+      .style("fill-opacity", 1);
+
+  groupText.append("textPath")
+      .attr("xlink:href", function(d, i) { return "#group" + i; })
+      .attr("startOffset", "25%")
+      .text(function(d, i) { return ids[i].toString(); });
+
+
+  // Add the chords.
+  var chord = svg.selectAll(".chord")
+      .data(layout.chords)
+    .enter().append("path")
+      .attr("class", "chord")
+      .style("fill",  function(d) { return generateGradient(d); })
+      .style("stroke", "#000")
+      .style("stroke-width", "3px")
+      .attr("d", path);
+}
+
+</script>
+
+{% endblock %}
