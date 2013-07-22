@@ -1,0 +1,13 @@
+{% extends "layout.html" %}
+
+{% block title %}
+<title> v3 - Viva Vivid Visualizations </title>
+{% endblock %}
+
+{% block body %}
+<p style="text-align:center"> v3 - an easy way to visualize complex data </p>
+<p> Click on the links below to get started! </p>
+<p> Analyze Data from: </p>
+<a href="{{ url_for('analyze_csv') }}"> CSV File </br>
+<a href="{{ url_for('analyze_dynamic_data') }}"> Dynamic Data from URL </br>
+{% endblock %}
