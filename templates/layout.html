@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    {% block title scoped %}
+    {% endblock %}
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-responsive.css') }}">
+
+    <script src="{{ url_for('static', filename='js/jquery-2.0.3.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/d3.v3.js') }}"></script>
+
+    <style>
+      body {
+        padding-top: 80px;
+        font: 20px sans-serif;
+      }
+      .navbar-text.pull-right {
+        padding-left: 5px;
+        padding-right: 5px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="navbar navbar-inverse navbar-fixed-top" >
+      <div class="navbar-inner" style="padding-left: 10px; padding-right: 10px;">
+        <a class="brand" href="#">V3</a>
+      </div>
+    </div>
+
+    <script> $SCRIPT_ROOT = {{ request.script_root|tojson|safe }}; </script>
+
+    {% block body scoped %}
+    {% endblock %}
+  </body>
+
+</html>
