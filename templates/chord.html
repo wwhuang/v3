@@ -71,7 +71,7 @@ var defs = svg.append('svg:defs');
 var start_color = d3.hcl(98.734, 1.465, 36.795)
 var stop_color = d3.hcl(17.573, -3.297, -16.966)
 var cscale = d3.scale.linear()
-      .range(["hsl(62,100%,90%)", "hsl(228,30%,20%)"])
+      .range(["hsl(40,100%,70%)", "hsl(240,100%,20%)"])
       .interpolate(d3.interpolateHcl);
 
 getInfoAndRender();
@@ -86,7 +86,7 @@ svg.append("text") // Give the graph a title
   .text(title);
 
 {% if update_url %}
-var looper = setInterval(function(){getInfoAndRender()}, 3000);
+var looper = setInterval(function(){getInfoAndRender()}, 4000);
 {% endif %}
 
 function getInfoAndRender() {
@@ -227,7 +227,9 @@ function render_graph() {
       .data(layout.groups)
 
   // Update existing arcs
-  groups.select("path") // updating the visual arc
+  groups.select("path") //updating arc path and color
+    .transition()
+    .duration(500)
     .attr("d", arc)
     .style("fill", function(d,i) {return cscale(i)});
   groups.select("text") // updating arc labels
@@ -261,8 +263,11 @@ function render_graph() {
       .data(layout.chords)
 
   // Update existing chords
+  chords.transition().duration(500)
+    .attr("d", path);
+
   chords.style("fill",  function(d) { return updateGradient(d); })
-      .attr("d", path);
+
 
   // Add in new chords
   chords.enter().append("path")
