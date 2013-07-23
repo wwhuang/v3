@@ -169,8 +169,12 @@ function updateGradient(d) {
 }
 
 function calculateGradient(d) {
-  var source_angle = (d.source.startAngle + d.source.endAngle) / 2 - 1.57
-  var target_angle = (d.target.startAngle + d.target.endAngle) / 2 - 1.57
+  var source_angle = (d.source.startAngle + d.source.endAngle) / 2
+  var target_angle = (d.target.startAngle + d.target.endAngle) / 2
+  // Converting source and target angles to be consistent with a
+  // normal cartesian coordinate system
+  source_angle = source_angle - Math.PI/2 * -1
+  target_angle = target_angle - Math.PI/2 * -1
   var source_x = Math.cos(source_angle)
   var source_y = Math.sin(source_angle)
   var target_x = Math.cos(target_angle)
@@ -182,27 +186,29 @@ function calculateGradient(d) {
   var y1 = 0
   var y2 = 0
 
+  var norm = 100
+
   if(xdiff > ydiff) {
     y1 = "0%"
     y2 = "0%"
-    if(source_x < target_x) {
+    if(source_x > target_x) {
       x1 = "0%"
-      x2 = "100%"
+      x2 = norm.toString() + "%"
     }
     else {
-      x1 = "100%"
+      x1 = norm.toString() + "%"
       x2 = "0%"
     }
   }
   else {
     x1 = "0%"
     x2 = "0%"
-    if(source_y < target_y) {
+    if(source_y > target_y) {
       y1 = "0%"
-      y2 = "100%"
+      y2 = norm.toString() + "%"
     }
     else {
-      y1 = "100%"
+      y1 = norm.toString() + "%"
       y2 = "0%"
     }
   }
