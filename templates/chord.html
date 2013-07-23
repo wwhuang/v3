@@ -77,6 +77,7 @@ var cscale = d3.scale.linear()
 getInfoAndRender();
 
 svg.append("text") // Give the graph a title
+  .attr("id", "graph-title")
   .attr("x", 0)
   .attr("y", -height/2 + 20)
   .attr("text-anchor", "middle")
@@ -85,7 +86,7 @@ svg.append("text") // Give the graph a title
   .text(title);
 
 {% if update_url %}
-  var looper = setInterval(function(){getInfoAndRender()}, 10000);
+var looper = setInterval(function(){getInfoAndRender()}, 3000);
 {% endif %}
 
 function getInfoAndRender() {
@@ -111,10 +112,9 @@ function getInfoAndRender() {
  * TODO: Switch to radial gradents for diagonal facing nodes
 */
 function generateGradient(d) {
-
   var i1 = d.source.index
   var i2 = d.target.index
-  if(i1 < i2) {
+  if(i1 > i2) {
     i1 = d.target.index
     i2 = d.source.index
   }
@@ -139,31 +139,32 @@ function generateGradient(d) {
       .attr("stop-color", cscale(d.target.index))
       .attr("stop-opacity", 1);
 
-  var g_url = 'url(#gradient-' + i1.toString() + "-" + i2.toString()
+  var g_url = 'url(#gradient-' + i1.toString() + "-" + i2.toString() + ')'
   return g_url;
 }
 
 function updateGradient(d) {
-  var gradient = defs.select("#gradient-" + i1.toString + "-" + i2.toString())
-  var gradient_info = calculateGradient(d)
-  var updated_colors = [cscale(d.source.index), cscale(d.target.index)]
   var i1 = d.source.index
   var i2 = d.target.index
-  if(i1 < i2) {
+  if(i1 > i2) {
     i1 = d.target.index
     i2 = d.source.index
   }
+
+  var gradient = defs.select("#gradient-" + i1.toString() + "-" + i2.toString())
+  var gradient_info = calculateGradient(d)
+  var updated_colors = [cscale(d.source.index), cscale(d.target.index)]
 
   gradient.attr("x1", gradient_info[0])
     .attr("y1", gradient_info[1])
     .attr("x2", gradient_info[2])
     .attr("y2", gradient_info[3])
 
-  gradient.selectAll("svg:stop")
+  gradient.selectAll("stop")
     .data(updated_colors)
       .attr("stop-color", function(d){return d;})
 
-  var g_url = 'url(#gradient-' + i1.toString() + "-" + i2.toString()
+  var g_url = 'url(#gradient-' + i1.toString() + "-" + i2.toString() + ')'
   return g_url;
 }
 
@@ -211,6 +212,9 @@ function calculateGradient(d) {
 
 function render_graph() {
 
+  svg.select("#graph-title")
+    .text(title);
+
   // Compute the chord layout based on the data matrix
   layout.matrix(data_matrix);
 
@@ -223,35 +227,31 @@ function render_graph() {
       .data(layout.groups)
 
   // Update existing arcs
-  groups.selectAll("path") // updating the visual arc
+  groups.select("path") // updating the visual arc
+    .attr("d", arc)
+    .style("fill", function(d,i) {return cscale(i)});
+  groups.select("text") // updating arc labels
+    .select("textPath")
+      .text(function(d,i) { return ids[i].toString(); });
+
+  // Add new arcs when new nodes join the network
+  var new_groups = groups.enter().append("g")
+      .attr("class", "group");
+  new_groups.append("path") // Creating the arc
     .attr("id", function(d, i) { return "group" + i; })
     .attr("d", arc)
     .attr("class", "group-arc")
-    .style("fill", function(d,i) {return cscale(i)});
-  groups.selectAll("text") // updating arc labels
-    .selectAll("textPath")
+    .style("fill", function(d,i) { return cscale(i) });
+  new_groups.append("text") // Creating the text label
+    .attr("dy", -10)
+    .style("text-anchor", "middle")
+    .style("font-size", "12pt")
+    .style("fill", function(d,i) { return cscale(i) })
+    .style("fill-opacity", 1)
+    .append("textPath")
       .attr("xlink:href", function(d, i) { return "#group" + i; })
       .attr("startOffset", "25%")
       .text(function(d, i) { return ids[i].toString(); });
-
- // Add new arcs when new nodes join the network
-  groups.enter().append("g")
-      .attr("class", "group")
-        .append("path") //
-          .attr("id", function(d, i) { return "group" + i; })
-          .attr("d", arc)
-          .attr("class", "group-arc")
-          .style("fill", function(d,i) { return cscale(i) });
-  groups.enter().append("text")
-      .attr("dy", -10)
-      .style("text-anchor", "middle")
-      .style("font-size", "12pt")
-      .style("fill", function(d,i) { return cscale(i) })
-      .style("fill-opacity", 1)
-      .append("textPath")
-        .attr("xlink:href", function(d, i) { return "#group" + i; })
-        .attr("startOffset", "25%")
-        .text(function(d, i) { return ids[i].toString(); });
 
   // Remove old arcs associated with nodes that left the netowrk
   groups.exit().remove()
