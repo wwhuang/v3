@@ -1,6 +1,8 @@
 from flask import Flask, request, session, g, redirect, url_for, \
     abort, render_template, flash
 import csv
+import json
+import random
 
 app = Flask(__name__)
 app.config.from_object('fl_config')
@@ -46,13 +48,15 @@ def render_graph(graph_type, update_url):
         return render_template('stacked_bar_graph.html', update_url=update_url)
 
 
+@app.route('/')
 @app.route('/index')
 def index():
     return render_template('index.html')
 
 
-@app.route('/chord/<update_url>')
-def chord(update_url):
+@app.route('/chord')
+def chord():
+    update_url = request.args.get('update_url')
     return render_template('chord.html', update_url=update_url)
 
 
@@ -90,6 +94,21 @@ def analyze_csv():
             data['title'] = title
             return render_template('chord.html', one_shot_data=data)
 
+
+@app.route('/generate_random_chords')
+def generate_random_chords():
+    data = {}
+    data['ids'] = []
+    data['data'] = []
+    data['title'] = 'Dynamic Chord Test'
+
+    for i in range(7):
+        data['ids'].append(str(i))
+        data['data'].append([])
+        for n in range(7):
+            data['data'][i].append(random.randint(1, 100))
+
+    return json.dumps(data)
 
 if __name__ == '__main__':
     app.config['DEBUG'] = True
