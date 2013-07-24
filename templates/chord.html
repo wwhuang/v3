@@ -86,7 +86,7 @@ svg.append("text") // Give the graph a title
   .text(title);
 
 {% if update_url %}
-var looper = setInterval(function(){getInfoAndRender()}, 4000);
+var looper = setInterval(function(){getInfoAndRender()}, {{update_time}});
 {% endif %}
 
 function getInfoAndRender() {
@@ -191,6 +191,12 @@ function calculateGradient(d) {
   if(xdiff > ydiff) {
     y1 = "0%"
     y2 = "0%"
+    var abs_s_x = Math.abs(source_x)
+    var abs_t_x = Math.abs(target_x)
+    norm = 100 * Math.min(abs_s_x, abs_t_x) / Math.max(abs_s_x, abs_t_x)
+    if(norm < 50) {
+      norm = 100 - norm
+    }
     if(source_x > target_x) {
       x1 = "0%"
       x2 = norm.toString() + "%"
@@ -203,6 +209,12 @@ function calculateGradient(d) {
   else {
     x1 = "0%"
     x2 = "0%"
+    var abs_s_y = Math.abs(source_y)
+    var abs_t_y = Math.abs(target_y)
+    norm = 100 * Math.min(abs_s_y, abs_t_y) / Math.max(abs_s_y, abs_t_y)
+    if(norm < 50) {
+      norm = 100 - norm
+    }
     if(source_y > target_y) {
       y1 = "0%"
       y2 = norm.toString() + "%"
