@@ -57,7 +57,10 @@ def index():
 @app.route('/chord')
 def chord():
     update_url = request.args.get('update_url')
-    return render_template('chord.html', update_url=update_url)
+    u = 4000
+    if request.args.get('update_time'):
+        u = int(request.args.get('update_time'))
+    return render_template('chord.html', update_url=update_url, update_time=u)
 
 
 @app.route('/stacked_bar_graph/<update_url>')
