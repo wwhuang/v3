@@ -91,7 +91,7 @@ var looper = setInterval(function(){getInfoAndRender()}, {{update_time}});
 
 function getInfoAndRender() {
   {% if update_url %}
-    $.getJSON("{{ update_url }}", function(data) {
+    $.getJSON( "/get_data?update_url=" + "{{ update_url }}", function(data) {
       data_matrix = data['data']
       ids = data['ids']
       title = data['title']

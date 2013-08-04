@@ -3,6 +3,7 @@ from flask import Flask, request, session, g, redirect, url_for, \
 import csv
 import json
 import random
+import requests
 
 app = Flask(__name__)
 app.config.from_object('fl_config')
@@ -98,6 +99,14 @@ def analyze_csv():
             return render_template('chord.html', one_shot_data=data)
 
 
+@app.route('/get_data')
+def get_data():
+    update_url = request.args.get('update_url')
+    r = requests.get(update_url)
+    data = r.json()
+    return json.dumps(data)
+
+
 @app.route('/generate_random_chords')
 def generate_random_chords():
     data = {}
@@ -112,6 +121,7 @@ def generate_random_chords():
             data['data'][i].append(random.randint(1, 100))
 
     return json.dumps(data)
+
 
 if __name__ == '__main__':
     app.config['DEBUG'] = True
